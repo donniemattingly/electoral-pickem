@@ -1,0 +1,35 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAdmin() {
+      return request.auth != null && 
+             request.auth.token.email.matches("donniewmattingly@gmail.com");
+    }
+
+    function isBeforeDeadline() {
+      return request.time < timestamp.date(2024, 11, 5, 15, 0); // 10:00 AM ET = 15:00 UTC
+    }
+
+    match /users/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    match /picks/{userId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null 
+                   && request.auth.uid == userId 
+                   && isBeforeDeadline();
+    }
+    
+    match /results/{document} {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read: if false;
+      allow write: if false;
+    }
+  }
+}
